@@ -1,85 +1,54 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import { RouterView } from 'vue-router'
+import AppBackground from '@/components/AppBackground.vue'
+import AppHeader from '@/components/AppHeader.vue'
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
-
+  <AppBackground />
+  <AppHeader />
   <RouterView />
 </template>
 
-<style scoped>
-header {
+<style>
+/* 1. Use a more-intuitive box-sizing model */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+/* 2. Remove default margin */
+* {
+  margin: 0;
+}
+body {
+  /* 3. Add accessible line-height */
   line-height: 1.5;
-  max-height: 100vh;
+  /* 4. Improve text rendering */
+  -webkit-font-smoothing: antialiased;
 }
-
-.logo {
+/* 5. Improve media defaults */
+img, picture, video, canvas, svg {
   display: block;
-  margin: 0 auto 2rem;
+  max-width: 100%;
 }
-
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
+/* 6. Inherit fonts for form controls */
+input, button, textarea, select {
+  font: inherit;
 }
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
+/* 7. Avoid text overflows */
+p, h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: break-word;
 }
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
+/* 8. Improve line wrapping */
+p {
+  text-wrap: pretty;
 }
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
+h1, h2, h3, h4, h5, h6 {
+  text-wrap: balance;
 }
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+/*
+  9. Create a root stacking context
+*/
+#app {
+  isolation: isolate;
 }
 </style>

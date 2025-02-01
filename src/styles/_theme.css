@@ -1,0 +1,8 @@
+:root {
+  /* colors */
+  --black: hsla(0 0 0 / 1);
+  --white: hsla(0 100 100 / 1);
+
+  /* misc */
+  --spacing: 16px;
+}
