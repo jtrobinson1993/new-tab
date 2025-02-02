@@ -19,7 +19,7 @@
   background-image: url('@/assets/bg.png');
   background-position: center;
   background-size: cover;
-  filter: blur(calc(var(--blur) * 1px)) brightness(.8);
+  filter: blur(calc(var(--blur) * 1px)) brightness(1);
   transform: scale(calc((100 + var(--blur) / 2) / 100));
   transition: filter .3s linear, transform .3s linear;
   z-index: -1;

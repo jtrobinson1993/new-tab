@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import WeatherWidgetSetup from '@/components/widgets/WeatherWidgetSetup.vue';
-
-
+import SetupWeatherWidget from '@/components/widgets/SetupWeatherWidget.vue'
 </script>
 
 <template>
   <main>
-    <WeatherWidgetSetup />
+    <SetupWeatherWidget />
   </main>
 </template>

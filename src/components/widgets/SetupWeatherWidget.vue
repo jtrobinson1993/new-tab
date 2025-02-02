@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import WidgetContainer from '../WidgetContainer.vue';
 import FormContainer from '../FormContainer.vue';
 import { useWidgetStore, type Widget } from '@/stores/widgets';
+import SetupWidgetContainer from '../SetupWidgetContainer.vue';
 
 const formCity = ref('');
 const formLatitude = ref('');
@@ -55,7 +55,7 @@ async function getForecast() {
 </script>
 
 <template>
-  <WidgetContainer class="widget-weather">
+  <SetupWidgetContainer class="widget-weather">
     <FormContainer legend="Enter a Location" @submit="createWidget">
       <label for="widget-weather-city">City or Postal Code</label>
       <input id="widget-weather-city" type="text" v-model="formCity" :disabled="!!(formLatitude || formLongitude)" />
@@ -66,11 +66,11 @@ async function getForecast() {
       <input type="number" v-model="formLongitude" :disabled="!!(formCity)" />
       <button type="submit">Submit</button>
     </FormContainer>
-  </WidgetContainer>
+  </SetupWidgetContainer>
 </template>
 
 <style scoped>
 .widget-weather {
-  color: var(--white);
+  color: var(--black);
 }
 </style>
