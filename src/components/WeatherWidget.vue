@@ -154,6 +154,7 @@ async function addLocation() {
 
 function removeLocation(index: number) {
   const loc = locations.value[index]
+  if (!loc) return
   const key = locationKey(loc)
   localStorage.removeItem(WEATHER_KEY_PREFIX + key)
   weatherResults.value.delete(key)
