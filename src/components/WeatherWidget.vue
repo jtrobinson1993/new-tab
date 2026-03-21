@@ -184,16 +184,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.weather-container {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  font-family: system-ui, -apple-system, sans-serif;
-  color: #e0e0e0;
-}
 
 .weather-card {
   position: relative;
@@ -257,6 +247,17 @@ onUnmounted(() => {
 </style>
 
 <style>
+.weather-container {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e0e0e0;
+}
+
 @container main (max-width: 1280px) {
   .weather-container {
     position: static;

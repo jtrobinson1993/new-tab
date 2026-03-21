@@ -72,17 +72,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.search-container {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  z-index: 10;
-}
 
 .search-form {
   width: 100%;
@@ -149,12 +138,25 @@ onMounted(() => {
 </style>
 
 <style>
+.search-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+}
+
 @container main (max-width: 1280px) {
   .search-container {
     position: static;
     transform: none;
     width: 100%;
     max-width: 560px;
+    box-sizing: border-box;
   }
 
   .search-input {
