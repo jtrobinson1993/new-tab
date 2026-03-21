@@ -292,6 +292,7 @@ onUnmounted(() => {
             <img :src="precipAwareIcon(day.weatherCode, day.precipChance, day.tempLow)" :alt="weatherMap[day.weatherCode]?.description" class="forecast-icon" />
             <span class="forecast-temps">
               <span class="forecast-low">{{ displayTemp(day.tempLow) }}°</span>
+              <span class="forecast-sep">/</span>
               <span class="forecast-high">{{ displayTemp(day.tempHigh) }}°</span>
             </span>
             <span v-if="day.precipChance > 0" class="forecast-precip">
@@ -463,12 +464,12 @@ onUnmounted(() => {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 20px 24px;
+  border-radius: 20px;
+  padding: 24px 28px;
   color: #e0e0e0;
   font-family: system-ui, -apple-system, sans-serif;
-  max-width: 340px;
-  width: 340px;
+  width: fit-content;
+  max-width: 90vw;
   margin: auto;
 }
 
@@ -478,48 +479,45 @@ onUnmounted(() => {
 
 .forecast-title {
   margin: 0 0 16px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #ccc;
 }
 
 .forecast-days {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 32px;
 }
 
 .forecast-day {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.forecast-day:last-child {
-  border-bottom: none;
+  gap: 6px;
+  padding: 0 4px;
 }
 
 .forecast-day-name {
-  width: 36px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #bbb;
-  flex-shrink: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e0e0e0;
 }
 
 .forecast-icon {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
 }
 
 .forecast-temps {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   font-size: 0.95rem;
-  min-width: 70px;
+}
+
+.forecast-sep {
+  color: rgba(255, 255, 255, 0.2);
 }
 
 .forecast-high {
@@ -533,12 +531,10 @@ onUnmounted(() => {
 }
 
 .forecast-precip {
-  margin-left: auto;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #6ab0f3;
   display: flex;
-  gap: 4px;
-  flex-shrink: 0;
+  gap: 3px;
 }
 
 .forecast-precip-amount {
