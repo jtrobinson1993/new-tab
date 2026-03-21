@@ -27,7 +27,7 @@ function loadChannels() {
 
 function onChannelsUpdated() {
   loadChannels()
-  refresh()
+  refetch()
 }
 
 onMounted(() => {
@@ -72,7 +72,7 @@ async function checkTwitchLive(
 
 const SIMULATE_LIVE = false
 
-const { data: liveStreams, refresh } = useQuery({
+const { data: liveStreams, refetch } = useQuery({
   key: ['live-streamers'],
   query: async (): Promise<LiveStream[]> => {
     if (streamers.value.length === 0) return []
