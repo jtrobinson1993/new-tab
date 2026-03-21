@@ -127,29 +127,34 @@ function platformLabel(platform: 'youtube' | 'twitch') {
 
 <template>
   <div v-if="hasLive" class="live-widget">
-    <GlassCard v-for="stream in liveStreams" :key="stream.handle" class="stream-card">
-      <a :href="streamUrl(stream)" target="_blank" rel="noopener" class="stream-link">
-        <span class="live-dot" />
-        <span class="stream-name">{{ stream.name }}</span>
-        <span class="stream-platform">{{ platformLabel(stream.platform) }}</span>
-      </a>
-      <p v-if="stream.title" class="stream-title">{{ stream.title }}</p>
-    </GlassCard>
+    <a v-for="stream in liveStreams" :key="stream.handle" :href="streamUrl(stream)" target="_blank" rel="noopener" class="stream-card-link">
+      <GlassCard class="stream-card">
+        <div class="stream-link">
+          <span class="live-dot" />
+          <span class="stream-name">{{ stream.name }}</span>
+          <span class="stream-platform">{{ platformLabel(stream.platform) }}</span>
+        </div>
+        <p v-if="stream.title" class="stream-title">{{ stream.title }}</p>
+      </GlassCard>
+    </a>
   </div>
 </template>
 
 <style scoped>
 
-.stream-link {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.stream-card-link {
   text-decoration: none;
   color: #e0e0e0;
 }
 
-.stream-link:hover .stream-name {
+.stream-card-link:hover .stream-name {
   text-decoration: underline;
+}
+
+.stream-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .live-dot {
@@ -173,7 +178,7 @@ function platformLabel(platform: 'youtube' | 'twitch') {
 
 .stream-platform {
   font-size: 0.75rem;
-  color: #999;
+  color: #ccc;
 }
 
 .stream-title {
