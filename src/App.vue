@@ -39,7 +39,7 @@ async function fetchBackground() {
   try {
     const pick = subreddits[Math.floor(Math.random() * subreddits.length)]
     const res = await fetch(
-      `${PROXY_BASE}/reddit-api/r/${pick}/top.json?t=week&limit=50&raw_json=1`,
+      `${PROXY_BASE}/reddit-api/r/${pick}/top.json?t=month&limit=50&raw_json=1`,
     )
     const data = await res.json()
     const posts = data.data.children
