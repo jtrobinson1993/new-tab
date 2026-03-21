@@ -119,7 +119,7 @@ onMounted(() => {
   gap: 5px;
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 0.8rem;
-  color: #999;
+  color: #ddd;
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
   padding: 5px 12px;
@@ -127,7 +127,7 @@ onMounted(() => {
 }
 
 .engine-label.active {
-  color: #e0e0e0;
+  color: #fff;
   background: rgba(255, 255, 255, 0.1);
 }
 
