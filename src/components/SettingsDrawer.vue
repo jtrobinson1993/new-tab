@@ -17,6 +17,7 @@ interface SavedLocation {
 const CHANNELS_KEY = 'streamer-channels'
 const SUBREDDITS_KEY = 'background-subreddits'
 const LOCATIONS_KEY = 'weather-locations'
+const TEMP_UNIT_KEY = 'temperature-unit'
 
 const DEFAULT_CHANNELS: ChannelConfig[] = [
   { name: 'WirtualTV', platform: 'youtube', handle: '@WirtualTV' },
@@ -54,6 +55,15 @@ const weatherLocations = ref<SavedLocation[]>([])
 const locationInput = ref('')
 const locationError = ref('')
 const locationLoading = ref(false)
+const tempUnit = ref<'C' | 'F'>(
+  (localStorage.getItem(TEMP_UNIT_KEY) as 'C' | 'F') || 'C',
+)
+
+function setTempUnit(unit: 'C' | 'F') {
+  tempUnit.value = unit
+  localStorage.setItem(TEMP_UNIT_KEY, unit)
+  window.dispatchEvent(new CustomEvent('temp-unit-changed'))
+}
 
 function loadChannels(): ChannelConfig[] {
   try {
@@ -250,6 +260,12 @@ onUnmounted(() => {
         <section class="section">
           <h3>Weather Locations</h3>
           <p class="section-hint">Add cities to show weather for.</p>
+
+          <p class="section-hint">Temperature unit</p>
+          <div class="platform-toggle temp-unit-margin">
+            <button type="button" class="toggle-btn" :class="{ active: tempUnit === 'C' }" @click="setTempUnit('C')">°C</button>
+            <button type="button" class="toggle-btn" :class="{ active: tempUnit === 'F' }" @click="setTempUnit('F')">°F</button>
+          </div>
 
           <div class="channel-list">
             <div v-for="(loc, i) in weatherLocations" :key="locationKey(loc)" class="channel-item">
@@ -619,5 +635,9 @@ onUnmounted(() => {
 .add-btn:hover {
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
+}
+
+.temp-unit-margin {
+  margin-bottom: 20px;
 }
 </style>

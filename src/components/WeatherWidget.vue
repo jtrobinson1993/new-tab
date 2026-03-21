@@ -23,7 +23,12 @@ interface LocationWeather {
 }
 
 const LOCATIONS_KEY = 'weather-locations'
+const TEMP_UNIT_KEY = 'temperature-unit'
 const WEATHER_KEY_PREFIX = 'weather-'
+
+const tempUnit = ref<'C' | 'F'>(
+  (localStorage.getItem(TEMP_UNIT_KEY) as 'C' | 'F') || 'C',
+)
 
 const weatherMap: Record<number, { description: string; icon: string; iconNight?: string }> = {
   0: { description: 'Clear sky', icon: 'clear-day', iconNight: 'clear-night' },
@@ -110,6 +115,15 @@ async function fetchWeatherForLocation(loc: SavedLocation) {
   }
 }
 
+function onTempUnitChanged() {
+  tempUnit.value = (localStorage.getItem(TEMP_UNIT_KEY) as 'C' | 'F') || 'C'
+}
+
+function displayTemp(f: number): number {
+  if (tempUnit.value === 'C') return Math.round((f - 32) * 5 / 9)
+  return f
+}
+
 function onLocationsUpdated() {
   const oldKeys = new Set(locations.value.map(locationKey))
   loadLocations()
@@ -149,10 +163,12 @@ onMounted(() => {
   loadLocations()
   locations.value.forEach(fetchWeatherForLocation)
   window.addEventListener('locations-updated', onLocationsUpdated)
+  window.addEventListener('temp-unit-changed', onTempUnitChanged)
 })
 
 onUnmounted(() => {
   window.removeEventListener('locations-updated', onLocationsUpdated)
+  window.removeEventListener('temp-unit-changed', onTempUnitChanged)
 })
 </script>
 
@@ -174,7 +190,7 @@ onUnmounted(() => {
             :alt="getWeatherInfo(item.weather.weatherCode, item.weather.isDay).description"
             class="weather-icon"
           />
-          <span class="temperature">{{ item.weather.temperature }}°F</span>
+          <span class="temperature">{{ displayTemp(item.weather.temperature) }}°{{ tempUnit }}</span>
         </div>
         <p class="description">{{ getWeatherInfo(item.weather.weatherCode, item.weather.isDay).description }}</p>
       </template>
