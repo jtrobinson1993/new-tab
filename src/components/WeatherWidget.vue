@@ -9,10 +9,26 @@ interface SavedLocation {
   lon: number
 }
 
+interface ForecastDay {
+  date: string
+  dayName: string
+  weatherCode: number
+  tempHigh: number
+  tempLow: number
+  precipChance: number
+  precipAmount: number
+}
+
 interface WeatherData {
   temperature: number
   weatherCode: number
   isDay: boolean
+  todayHigh: number
+  todayLow: number
+  todayPrecipChance: number
+  todayPrecipAmount: number
+  todayWeatherCode: number
+  forecast: ForecastDay[]
 }
 
 interface LocationWeather {
@@ -100,13 +116,33 @@ async function fetchWeatherForLocation(loc: SavedLocation) {
 
   weatherResults.value.set(key, { weather: null, loading: true, error: '' })
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weather_code,is_day&temperature_unit=fahrenheit`
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&temperature_unit=fahrenheit&forecast_days=7`
     const res = await fetch(url)
     const data = await res.json()
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const forecast: ForecastDay[] = (data.daily.time as string[]).slice(1).map((date: string, i: number) => {
+      const idx = i + 1
+      const d = new Date(date + 'T00:00:00')
+      return {
+        date,
+        dayName: dayNames[d.getDay()]!,
+        weatherCode: data.daily.weather_code[idx],
+        tempHigh: Math.round(data.daily.temperature_2m_max[idx]),
+        tempLow: Math.round(data.daily.temperature_2m_min[idx]),
+        precipChance: Math.round(data.daily.precipitation_probability_max[idx]),
+        precipAmount: data.daily.precipitation_sum[idx],
+      }
+    })
     const weather: WeatherData = {
       temperature: Math.round(data.current.temperature_2m),
       weatherCode: data.current.weather_code,
       isDay: data.current.is_day === 1,
+      todayHigh: Math.round(data.daily.temperature_2m_max[0]),
+      todayLow: Math.round(data.daily.temperature_2m_min[0]),
+      todayPrecipChance: Math.round(data.daily.precipitation_probability_max[0]),
+      todayPrecipAmount: data.daily.precipitation_sum[0],
+      todayWeatherCode: data.daily.weather_code[0],
+      forecast,
     }
     setCache(cacheKey, weather)
     weatherResults.value.set(key, { weather, loading: false, error: '' })
@@ -117,6 +153,32 @@ async function fetchWeatherForLocation(loc: SavedLocation) {
 
 function onTempUnitChanged() {
   tempUnit.value = (localStorage.getItem(TEMP_UNIT_KEY) as 'C' | 'F') || 'C'
+}
+
+function popoverId(loc: SavedLocation): string {
+  return 'forecast-' + locationKey(loc).replace(',', '-')
+}
+
+function toggleForecast(loc: SavedLocation) {
+  const el = document.getElementById(popoverId(loc))
+  if (el) el.togglePopover()
+}
+
+const NON_PRECIP_CODES = new Set([0, 1, 2, 3, 45, 48])
+
+function precipAwareIcon(code: number, precipChance: number, tempLow: number): string {
+  // If high precip chance but weather code doesn't show precipitation, override
+  if (precipChance >= 40 && NON_PRECIP_CODES.has(code)) {
+    const icon = tempLow <= 32 ? 'snow' : 'rain'
+    return `https://bmcdn.nl/assets/weather-icons/v3.0/fill/svg/${icon}.svg`
+  }
+  const entry = weatherMap[code] ?? { icon: 'cloudy' }
+  return `https://bmcdn.nl/assets/weather-icons/v3.0/fill/svg/${entry.icon}.svg`
+}
+
+function forecastIconUrl(code: number): string {
+  const entry = weatherMap[code] ?? { icon: 'cloudy' }
+  return `https://bmcdn.nl/assets/weather-icons/v3.0/fill/svg/${entry.icon}.svg`
 }
 
 function displayTemp(f: number): number {
@@ -174,7 +236,12 @@ onUnmounted(() => {
 
 <template>
   <div class="weather-container">
-    <GlassCard v-for="item in items" :key="locationKey(item.location)" class="weather-card">
+    <GlassCard
+      v-for="item in items"
+      :key="locationKey(item.location)"
+      class="weather-card"
+      @click="toggleForecast(item.location)"
+    >
       <div v-if="item.loading" class="loading">
         <svg class="spinner" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.25" />
@@ -184,16 +251,56 @@ onUnmounted(() => {
       <div v-else-if="item.error" class="error">{{ item.error }}</div>
       <template v-else-if="item.weather">
         <p class="city">{{ item.location.name }}</p>
-        <div class="weather-main">
-          <img
-            :src="getWeatherInfo(item.weather.weatherCode, item.weather.isDay).iconUrl"
-            :alt="getWeatherInfo(item.weather.weatherCode, item.weather.isDay).description"
-            class="weather-icon"
-          />
-          <span class="temperature">{{ displayTemp(item.weather.temperature) }}°{{ tempUnit }}</span>
+        <div class="weather-body">
+          <div class="weather-left">
+            <div class="weather-main">
+              <img
+                :src="getWeatherInfo(item.weather.weatherCode, item.weather.isDay).iconUrl"
+                :alt="getWeatherInfo(item.weather.weatherCode, item.weather.isDay).description"
+                class="weather-icon"
+              />
+              <span class="temperature">{{ displayTemp(item.weather.temperature) }}°{{ tempUnit }}</span>
+            </div>
+            <p class="description">{{ getWeatherInfo(item.weather.weatherCode, item.weather.isDay).description }}</p>
+          </div>
+          <div class="weather-divider" />
+          <div class="weather-right">
+            <div class="today-temps">
+              <span class="today-low">{{ displayTemp(item.weather.todayLow) }}°</span>
+              <span class="today-sep">/</span>
+              <span class="today-high">{{ displayTemp(item.weather.todayHigh) }}°</span>
+            </div>
+            <div class="right-divider" />
+            <div class="today-conditions">
+              <img :src="precipAwareIcon(item.weather.todayWeatherCode, item.weather.todayPrecipChance, item.weather.todayLow)" :alt="weatherMap[item.weather.todayWeatherCode]?.description" class="today-conditions-icon" />
+              <span class="today-precip-chance">{{ item.weather.todayPrecipChance }}%</span>
+            </div>
+          </div>
         </div>
-        <p class="description">{{ getWeatherInfo(item.weather.weatherCode, item.weather.isDay).description }}</p>
       </template>
+
+      <div
+        v-if="item.weather?.forecast"
+        :id="popoverId(item.location)"
+        popover
+        class="forecast-popover"
+      >
+        <h3 class="forecast-title">{{ item.location.name }} — 6-Day Forecast</h3>
+        <div class="forecast-days">
+          <div v-for="day in item.weather.forecast" :key="day.date" class="forecast-day">
+            <span class="forecast-day-name">{{ day.dayName }}</span>
+            <img :src="precipAwareIcon(day.weatherCode, day.precipChance, day.tempLow)" :alt="weatherMap[day.weatherCode]?.description" class="forecast-icon" />
+            <span class="forecast-temps">
+              <span class="forecast-low">{{ displayTemp(day.tempLow) }}°</span>
+              <span class="forecast-high">{{ displayTemp(day.tempHigh) }}°</span>
+            </span>
+            <span v-if="day.precipChance > 0" class="forecast-precip">
+              {{ day.precipChance }}%
+              <span v-if="day.precipAmount > 0" class="forecast-precip-amount">{{ day.precipAmount }}mm</span>
+            </span>
+          </div>
+        </div>
+      </div>
     </GlassCard>
 
   </div>
@@ -207,13 +314,19 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   padding: 16px 24px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.weather-card:hover {
+  background: rgba(0, 0, 0, 0.23);
 }
 
 .city {
-  margin: 0 0 2px 0;
+  margin: 0 0 8px 0;
   font-size: 1.1rem;
   font-weight: 500;
-  color: #ccc;
+  color: #e0e0e0;
   letter-spacing: 0.02em;
 }
 
@@ -233,10 +346,81 @@ onUnmounted(() => {
   font-weight: 300;
 }
 
+.weather-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.weather-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .description {
   margin: 0;
-  font-size: 1.2rem;
-  color: #aaa;
+  font-size: 1rem;
+  color: #e0e0e0;
+}
+
+.weather-divider {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 4px 6px;
+}
+
+.weather-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.today-temps {
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 2px;
+}
+
+.today-high {
+  font-weight: 600;
+  color: #ffcdc9;
+}
+
+.today-sep {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.today-low {
+  font-weight: 500;
+  color: #c0d8f0;
+}
+
+.right-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.today-conditions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.today-conditions-icon {
+  width: 36px;
+  height: 36px;
+}
+
+.today-precip-chance {
+  font-size: 0.8rem;
+  color: #e0e0e0;
 }
 
 .loading {
@@ -272,6 +456,93 @@ onUnmounted(() => {
   gap: 12px;
   font-family: system-ui, -apple-system, sans-serif;
   color: #e0e0e0;
+}
+
+.forecast-popover {
+  background: rgba(20, 20, 30, 0.8);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 20px 24px;
+  color: #e0e0e0;
+  font-family: system-ui, -apple-system, sans-serif;
+  max-width: 340px;
+  width: 340px;
+  margin: auto;
+}
+
+.forecast-popover::backdrop {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.forecast-title {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ccc;
+}
+
+.forecast-days {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.forecast-day {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.forecast-day:last-child {
+  border-bottom: none;
+}
+
+.forecast-day-name {
+  width: 36px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #bbb;
+  flex-shrink: 0;
+}
+
+.forecast-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.forecast-temps {
+  display: flex;
+  gap: 6px;
+  font-size: 0.95rem;
+  min-width: 70px;
+}
+
+.forecast-high {
+  font-weight: 600;
+  color: #ffcdc9;
+}
+
+.forecast-low {
+  font-weight: 500;
+  color: #c0d8f0;
+}
+
+.forecast-precip {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: #6ab0f3;
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.forecast-precip-amount {
+  color: #5590c4;
 }
 
 @container main (max-width: 1280px) {

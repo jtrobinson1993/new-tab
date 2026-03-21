@@ -126,30 +126,19 @@ function platformLabel(platform: 'youtube' | 'twitch') {
 </script>
 
 <template>
-  <GlassCard v-if="hasLive" class="live-widget">
-    <div v-for="stream in liveStreams" :key="stream.handle" class="stream">
+  <div v-if="hasLive" class="live-widget">
+    <GlassCard v-for="stream in liveStreams" :key="stream.handle" class="stream-card">
       <a :href="streamUrl(stream)" target="_blank" rel="noopener" class="stream-link">
         <span class="live-dot" />
         <span class="stream-name">{{ stream.name }}</span>
         <span class="stream-platform">{{ platformLabel(stream.platform) }}</span>
       </a>
       <p v-if="stream.title" class="stream-title">{{ stream.title }}</p>
-    </div>
-  </GlassCard>
+    </GlassCard>
+  </div>
 </template>
 
 <style scoped>
-.live-widget {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  color: #e0e0e0;
-  font-family: system-ui, -apple-system, sans-serif;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 
 .stream-link {
   display: flex;
@@ -190,7 +179,7 @@ function platformLabel(platform: 'youtube' | 'twitch') {
 .stream-title {
   margin: 2px 0 0 16px;
   font-size: 0.75rem;
-  color: #aaa;
+  color: #e0e0e0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -200,10 +189,32 @@ function platformLabel(platform: 'youtube' | 'twitch') {
 </style>
 
 <style>
+.live-widget {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  color: #e0e0e0;
+  font-family: system-ui, -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stream-card {
+  padding: 16px 20px;
+}
+
 @container main (max-width: 1280px) {
   .live-widget {
     position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
     width: 100%;
+  }
+
+  .stream-card {
+    flex: 0 1 auto;
     box-sizing: border-box;
   }
 }
