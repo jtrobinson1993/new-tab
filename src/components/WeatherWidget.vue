@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import GlassCard from './GlassCard.vue'
 import { getCached, setCache } from '@/utils/cache'
 
@@ -67,10 +67,6 @@ function getWeatherInfo(code: number, isDay: boolean) {
 
 const locations = ref<SavedLocation[]>([])
 const weatherResults = ref<Map<string, { weather: WeatherData | null; loading: boolean; error: string }>>(new Map())
-const showInput = ref(false)
-const inputValue = ref('')
-const inputError = ref('')
-const inputLoading = ref(false)
 
 function locationKey(loc: SavedLocation) {
   return `${loc.lat},${loc.lon}`
@@ -114,52 +110,25 @@ async function fetchWeatherForLocation(loc: SavedLocation) {
   }
 }
 
-async function geocodeCity(name: string): Promise<SavedLocation> {
-  const res = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en`,
-  )
-  const data = await res.json()
-  if (!data.results?.length) throw new Error('Location not found')
-  const r = data.results[0]
-  const displayName = [r.name, r.admin1, r.country_code?.toUpperCase()]
-    .filter(Boolean)
-    .join(', ')
-  return { name: displayName, lat: r.latitude, lon: r.longitude }
-}
+function onLocationsUpdated() {
+  const oldKeys = new Set(locations.value.map(locationKey))
+  loadLocations()
+  const newKeys = new Set(locations.value.map(locationKey))
 
-async function addLocation() {
-  const query = inputValue.value.trim()
-  if (!query) return
-
-  inputError.value = ''
-  inputLoading.value = true
-  try {
-    const loc = await geocodeCity(query)
-    const exists = locations.value.some((l) => locationKey(l) === locationKey(loc))
-    if (exists) {
-      inputError.value = 'Already added'
-      return
+  // Clean up removed locations
+  for (const key of oldKeys) {
+    if (!newKeys.has(key)) {
+      localStorage.removeItem(WEATHER_KEY_PREFIX + key)
+      weatherResults.value.delete(key)
     }
-    locations.value.push(loc)
-    saveLocations()
-    fetchWeatherForLocation(loc)
-    inputValue.value = ''
-    showInput.value = false
-  } catch {
-    inputError.value = 'Location not found'
-  } finally {
-    inputLoading.value = false
   }
-}
 
-function removeLocation(index: number) {
-  const loc = locations.value[index]
-  if (!loc) return
-  const key = locationKey(loc)
-  localStorage.removeItem(WEATHER_KEY_PREFIX + key)
-  weatherResults.value.delete(key)
-  locations.value.splice(index, 1)
-  saveLocations()
+  // Fetch weather for new locations
+  for (const loc of locations.value) {
+    if (!oldKeys.has(locationKey(loc))) {
+      fetchWeatherForLocation(loc)
+    }
+  }
 }
 
 const items = computed<LocationWeather[]>(() =>
@@ -178,17 +147,18 @@ const hasLocations = computed(() => locations.value.length > 0)
 
 onMounted(() => {
   loadLocations()
-  if (locations.value.length === 0) {
-    showInput.value = true
-  }
   locations.value.forEach(fetchWeatherForLocation)
+  window.addEventListener('locations-updated', onLocationsUpdated)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('locations-updated', onLocationsUpdated)
 })
 </script>
 
 <template>
   <div class="weather-container">
-    <GlassCard v-for="(item, i) in items" :key="locationKey(item.location)" class="weather-card">
-      <button class="remove-btn" @click="removeLocation(i)">&times;</button>
+    <GlassCard v-for="item in items" :key="locationKey(item.location)" class="weather-card">
       <div v-if="item.loading" class="loading">
         <svg class="spinner" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.25" />
@@ -210,20 +180,6 @@ onMounted(() => {
       </template>
     </GlassCard>
 
-    <GlassCard v-if="showInput" class="weather-card input-card">
-      <form @submit.prevent="addLocation">
-        <input
-          v-model="inputValue"
-          type="text"
-          placeholder="City, State or City, Country"
-          class="location-input"
-          :disabled="inputLoading"
-        />
-        <p v-if="inputError" class="input-error">{{ inputError }}</p>
-      </form>
-    </GlassCard>
-
-    <button v-if="!showInput" class="add-btn" @click="showInput = true">+</button>
   </div>
 </template>
 
@@ -245,29 +201,6 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   padding: 16px 24px;
-}
-
-.remove-btn {
-  position: absolute;
-  top: 6px;
-  right: 10px;
-  background: none;
-  border: none;
-  color: #777;
-  font-size: 1.1rem;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.weather-card:hover .remove-btn {
-  opacity: 1;
-}
-
-.remove-btn:hover {
-  color: #e53935;
 }
 
 .city {
@@ -321,54 +254,21 @@ onMounted(() => {
   color: #aaa;
 }
 
-.input-card {
-  padding: 12px 16px;
-}
+</style>
 
-.location-input {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  color: #e0e0e0;
-  font-size: 0.95rem;
-  padding: 8px 12px;
-  width: 220px;
-  outline: none;
-}
+<style>
+@container main (max-width: 1280px) {
+  .weather-container {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+  }
 
-.location-input::placeholder {
-  color: #777;
-}
-
-.location-input:focus {
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.input-error {
-  margin: 4px 0 0;
-  font-size: 0.8rem;
-  color: #e53935;
-}
-
-.add-btn {
-  align-self: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: #999;
-  font-size: 1.4rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.15s;
-}
-
-.add-btn:hover {
-  color: #e0e0e0;
+  .weather-card {
+    flex: 0 1 auto;
+    box-sizing: border-box;
+  }
 }
 </style>

@@ -1,15 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useQuery } from '@pinia/colada'
 import GlassCard from './GlassCard.vue'
 import { getCached, setCache } from '@/utils/cache'
 import { PROXY_BASE } from '@/utils/api'
+import type { ChannelConfig } from './SettingsDrawer.vue'
 
-interface StreamerConfig {
-  name: string
-  platform: 'youtube' | 'twitch'
-  handle: string
-}
+const CHANNELS_KEY = 'streamer-channels'
 
 interface LiveStream {
   name: string
@@ -19,11 +16,28 @@ interface LiveStream {
   viewers?: number
 }
 
-const streamers: StreamerConfig[] = [
-  { name: 'WirtualTV', platform: 'youtube', handle: '@WirtualTV' },
-  { name: 'Scrapie', platform: 'youtube', handle: '@Scrapie' },
-  { name: 'Sodapoppin', platform: 'twitch', handle: 'sodapoppin' },
-]
+const streamers = ref<ChannelConfig[]>([])
+
+function loadChannels() {
+  try {
+    const raw = localStorage.getItem(CHANNELS_KEY)
+    if (raw) streamers.value = JSON.parse(raw)
+  } catch { /* ignore */ }
+}
+
+function onChannelsUpdated() {
+  loadChannels()
+  refresh()
+}
+
+onMounted(() => {
+  loadChannels()
+  window.addEventListener('channels-updated', onChannelsUpdated)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('channels-updated', onChannelsUpdated)
+})
 
 async function checkYouTubeLive(handle: string): Promise<{ live: boolean; title?: string }> {
   const res = await fetch(`${PROXY_BASE}/yt-api/${handle}/live`)
@@ -58,11 +72,13 @@ async function checkTwitchLive(
 
 const SIMULATE_LIVE = false
 
-const { data: liveStreams } = useQuery({
+const { data: liveStreams, refresh } = useQuery({
   key: ['live-streamers'],
   query: async (): Promise<LiveStream[]> => {
+    if (streamers.value.length === 0) return []
+
     if (SIMULATE_LIVE) {
-      return streamers.map((s) => ({
+      return streamers.value.map((s) => ({
         ...s,
         title: s.platform === 'twitch' ? 'Just chatting with the boys' : 'Trackmania COTD Grind',
         viewers: s.platform === 'twitch' ? 24312 : undefined,
@@ -73,7 +89,7 @@ const { data: liveStreams } = useQuery({
     if (cached) return cached
 
     const results = await Promise.allSettled(
-      streamers.map(async (s) => {
+      streamers.value.map(async (s) => {
         if (s.platform === 'youtube') {
           const result = await checkYouTubeLive(s.handle)
           if (!result.live) return null
@@ -179,5 +195,16 @@ function platformLabel(platform: 'youtube' | 'twitch') {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 250px;
+}
+
+</style>
+
+<style>
+@container main (max-width: 1280px) {
+  .live-widget {
+    position: static;
+    width: 100%;
+    box-sizing: border-box;
+  }
 }
 </style>
