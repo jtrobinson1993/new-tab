@@ -117,7 +117,7 @@ async function fetchWeatherForLocation(loc: SavedLocation) {
 
   weatherResults.value.set(key, { weather: null, loading: true, error: '' })
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m&temperature_unit=fahrenheit&forecast_days=7&timezone=auto`
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,precipitation_probability,precipitation&temperature_unit=fahrenheit&forecast_days=7&timezone=auto`
     const res = await fetch(url)
     const data = await res.json()
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -150,14 +150,23 @@ async function fetchWeatherForLocation(loc: SavedLocation) {
     const todayHigh = Math.round(Math.max(...todayHourlyTemps))
     const todayLow = Math.round(Math.min(...todayHourlyTemps))
 
+    // Compute today's precipitation from hourly data for the rest of the day
+    const hourlyPrecipProb: number[] = data.hourly.precipitation_probability
+    const hourlyPrecip: number[] = data.hourly.precipitation
+    const todayHourly = hourlyTimes
+      .map((t: string, i: number) => ({ time: t, prob: hourlyPrecipProb[i]!, precip: hourlyPrecip[i]! }))
+      .filter((h) => h.time.startsWith(todayStr) && new Date(h.time).getHours() >= currentHour)
+    const todayPrecipChance = todayHourly.length > 0 ? Math.round(Math.max(...todayHourly.map((h) => h.prob))) : 0
+    const todayPrecipAmount = todayHourly.reduce((sum, h) => sum + h.precip, 0)
+
     const weather: WeatherData = {
       temperature: Math.round(currentTemp),
       weatherCode: data.current.weather_code,
       isDay: data.current.is_day === 1,
       todayHigh,
       todayLow,
-      todayPrecipChance: Math.round(data.daily.precipitation_probability_max[0]),
-      todayPrecipAmount: data.daily.precipitation_sum[0],
+      todayPrecipChance,
+      todayPrecipAmount: Math.round(todayPrecipAmount * 10) / 10,
       todayWeatherCode: data.daily.weather_code[0],
       forecast,
     }
