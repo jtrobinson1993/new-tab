@@ -13,7 +13,8 @@
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "format": "prettier --write --experimental-cli src/",
+    "deploy": "git push && gh run watch $(gh run list --limit 1 --json databaseId -q '.[0].databaseId') --exit-status"
   },
   "dependencies": {
     "@iconify/vue": "^5.0.0",
