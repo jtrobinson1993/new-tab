@@ -106,7 +106,8 @@ function saveLocations() {
 
 async function fetchWeatherForLocation(loc: SavedLocation) {
   const key = locationKey(loc)
-  const cacheKey = WEATHER_KEY_PREFIX + key
+  const today = new Date().toISOString().slice(0, 10)
+  const cacheKey = WEATHER_KEY_PREFIX + today + '-' + key
 
   const cached = getCached<WeatherData>(cacheKey)
   if (cached) {
@@ -116,7 +117,7 @@ async function fetchWeatherForLocation(loc: SavedLocation) {
 
   weatherResults.value.set(key, { weather: null, loading: true, error: '' })
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&temperature_unit=fahrenheit&forecast_days=7`
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m&temperature_unit=fahrenheit&forecast_days=7&timezone=auto`
     const res = await fetch(url)
     const data = await res.json()
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -133,12 +134,28 @@ async function fetchWeatherForLocation(loc: SavedLocation) {
         precipAmount: data.daily.precipitation_sum[idx],
       }
     })
+    // Compute today's high/low from hourly data for the rest of the day
+    const now = new Date()
+    const todayStr = now.toISOString().slice(0, 10)
+    const currentHour = now.getHours()
+    const hourlyTimes: string[] = data.hourly.time
+    const hourlyTemps: number[] = data.hourly.temperature_2m
+    const todayHourlyTemps = hourlyTimes
+      .map((t: string, i: number) => ({ time: t, temp: hourlyTemps[i]! }))
+      .filter((h) => h.time.startsWith(todayStr) && new Date(h.time).getHours() >= currentHour)
+      .map((h) => h.temp)
+    // Include current temp in the range
+    const currentTemp = data.current.temperature_2m
+    todayHourlyTemps.push(currentTemp)
+    const todayHigh = Math.round(Math.max(...todayHourlyTemps))
+    const todayLow = Math.round(Math.min(...todayHourlyTemps))
+
     const weather: WeatherData = {
-      temperature: Math.round(data.current.temperature_2m),
+      temperature: Math.round(currentTemp),
       weatherCode: data.current.weather_code,
       isDay: data.current.is_day === 1,
-      todayHigh: Math.round(data.daily.temperature_2m_max[0]),
-      todayLow: Math.round(data.daily.temperature_2m_min[0]),
+      todayHigh,
+      todayLow,
       todayPrecipChance: Math.round(data.daily.precipitation_probability_max[0]),
       todayPrecipAmount: data.daily.precipitation_sum[0],
       todayWeatherCode: data.daily.weather_code[0],
@@ -192,9 +209,10 @@ function onLocationsUpdated() {
   const newKeys = new Set(locations.value.map(locationKey))
 
   // Clean up removed locations
+  const today = new Date().toISOString().slice(0, 10)
   for (const key of oldKeys) {
     if (!newKeys.has(key)) {
-      localStorage.removeItem(WEATHER_KEY_PREFIX + key)
+      localStorage.removeItem(WEATHER_KEY_PREFIX + today + '-' + key)
       weatherResults.value.delete(key)
     }
   }
