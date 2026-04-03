@@ -15,7 +15,6 @@ interface SavedLocation {
 }
 
 const CHANNELS_KEY = 'streamer-channels'
-const SUBREDDITS_KEY = 'background-subreddits'
 const LOCATIONS_KEY = 'weather-locations'
 const TEMP_UNIT_KEY = 'temperature-unit'
 
@@ -47,10 +46,6 @@ const platform = ref<'youtube' | 'twitch'>('twitch')
 const handleInput = ref('')
 const inputError = ref('')
 
-const subreddits = ref<string[]>([])
-const subredditInput = ref('')
-const subredditError = ref('')
-
 const weatherLocations = ref<SavedLocation[]>([])
 const locationInput = ref('')
 const locationError = ref('')
@@ -77,48 +72,6 @@ function saveChannels() {
   localStorage.setItem(CHANNELS_KEY, JSON.stringify(channels.value))
   localStorage.removeItem('live-streamers')
   window.dispatchEvent(new CustomEvent('channels-updated'))
-}
-
-function loadSubreddits(): string[] {
-  try {
-    const raw = localStorage.getItem(SUBREDDITS_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return []
-}
-
-function saveSubreddits() {
-  localStorage.setItem(SUBREDDITS_KEY, JSON.stringify(subreddits.value))
-  localStorage.removeItem('background')
-  window.dispatchEvent(new CustomEvent('subreddits-updated'))
-}
-
-function addSubreddit() {
-  let raw = subredditInput.value.trim()
-  if (!raw) return
-
-  raw = raw.replace(/^https?:\/\/(www\.)?reddit\.com\/r\//, '').replace(/\/$/, '')
-  raw = raw.replace(/^r\//, '')
-
-  if (!/^[\w]+$/.test(raw)) {
-    subredditError.value = 'Invalid subreddit name'
-    return
-  }
-
-  if (subreddits.value.some((s) => s.toLowerCase() === raw.toLowerCase())) {
-    subredditError.value = 'Already added'
-    return
-  }
-
-  subreddits.value.push(raw)
-  saveSubreddits()
-  subredditInput.value = ''
-  subredditError.value = ''
-}
-
-function removeSubreddit(index: number) {
-  subreddits.value.splice(index, 1)
-  saveSubreddits()
 }
 
 function loadWeatherLocations(): SavedLocation[] {
@@ -229,7 +182,6 @@ function removeChannel(index: number) {
 
 onMounted(() => {
   channels.value = loadChannels()
-  subreddits.value = loadSubreddits()
   weatherLocations.value = loadWeatherLocations()
   if (!localStorage.getItem(CHANNELS_KEY)) {
     saveChannels()
@@ -290,35 +242,6 @@ onUnmounted(() => {
             <button type="submit" class="add-btn" :disabled="locationLoading">
               {{ locationLoading ? 'Searching...' : 'Add Location' }}
             </button>
-          </form>
-        </section>
-
-        <hr class="section-divider" />
-
-        <section class="section">
-          <h3>Background</h3>
-          <p class="section-hint">Add subreddits to pull background images from. Leave empty for a plain background.</p>
-
-          <div class="channel-list">
-            <div v-for="(sub, i) in subreddits" :key="sub" class="channel-item">
-              <span class="subreddit-label">r/{{ sub }}</span>
-              <button class="channel-remove" @click="removeSubreddit(i)"><Icon icon="mdi:close" width="14" height="14" /></button>
-            </div>
-            <div v-if="subreddits.length === 0" class="empty-state">
-              No subreddits added — using plain navy background.
-            </div>
-          </div>
-
-          <form class="add-form" @submit.prevent="addSubreddit">
-            <input
-              v-model="subredditInput"
-              type="text"
-              placeholder="e.g. EarthPorn, spaceporn, CityPorn"
-              class="channel-input"
-              @input="subredditError = ''"
-            />
-            <p v-if="subredditError" class="input-error">{{ subredditError }}</p>
-            <button type="submit" class="add-btn">Add Subreddit</button>
           </form>
         </section>
 
@@ -498,12 +421,6 @@ onUnmounted(() => {
 }
 
 .location-name {
-  font-size: 0.9rem;
-  font-weight: 500;
-  flex: 1;
-}
-
-.subreddit-label {
   font-size: 0.9rem;
   font-weight: 500;
   flex: 1;

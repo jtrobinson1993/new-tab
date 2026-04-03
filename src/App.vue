@@ -4,10 +4,9 @@ import WeatherWidget from './components/WeatherWidget.vue'
 import LiveStreamers from './components/LiveStreamers.vue'
 import SettingsDrawer from './components/SettingsDrawer.vue'
 import SearchBar from './components/SearchBar.vue'
-import { getCached, setCache } from '@/utils/cache'
-import { PROXY_BASE } from '@/utils/api'
+import { getCachedBackground, getCachedImageCount, cacheImage } from '@/utils/imageCache'
 
-const SUBREDDITS_KEY = 'background-subreddits'
+const UNSPLASH_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY
 const bgUrl = ref('')
 const drawerOpen = ref(false)
 
@@ -15,65 +14,45 @@ function onDrawerToggle(e: Event) {
   drawerOpen.value = (e as CustomEvent).detail
 }
 
-function getSubreddits(): string[] {
-  try {
-    const raw = localStorage.getItem(SUBREDDITS_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return []
-}
-
 async function fetchBackground() {
-  const subreddits = getSubreddits()
-  if (subreddits.length === 0) {
-    bgUrl.value = ''
-    return
-  }
-
-  const cached = getCached<string>('background')
-  if (cached) {
-    bgUrl.value = cached
-    return
-  }
-
   try {
-    const pick = subreddits[Math.floor(Math.random() * subreddits.length)]
-    const res = await fetch(
-      `${PROXY_BASE}/reddit-api/r/${pick}/top.json?t=month&limit=50&raw_json=1`,
-    )
-    const data = await res.json()
-    const posts = data.data.children
-      .map((c: any) => c.data)
-      .filter(
-        (p: any) =>
-          !p.is_video &&
-          !p.is_self &&
-          p.url &&
-          /\.(jpg|jpeg|png)(\?.*)?$/i.test(p.url),
-      )
-    if (posts.length > 0) {
-      const img = posts[Math.floor(Math.random() * posts.length)]
-      bgUrl.value = img.url
-      setCache('background', img.url)
-    }
-  } catch {
-    // Background is non-critical, silently fail
-  }
-}
+    const cachedCount = await getCachedImageCount()
 
-function onSubredditsUpdated() {
-  bgUrl.value = ''
-  fetchBackground()
+    if (cachedCount >= 6) {
+      const cached = await getCachedBackground()
+      if (cached) {
+        bgUrl.value = cached
+        return
+      }
+    }
+
+    const res = await fetch(
+      'https://api.unsplash.com/photos/random?orientation=landscape&query=nature+landscape&w=1920',
+      { headers: { 'Authorization': `Client-ID ${UNSPLASH_KEY}` } },
+    )
+    if (!res.ok) {
+      // Fall back to cached image if available
+      const cached = await getCachedBackground()
+      if (cached) bgUrl.value = cached
+      return
+    }
+
+    const data = await res.json()
+    const imageUrl = data.urls.full
+    bgUrl.value = await cacheImage(imageUrl)
+  } catch {
+    // Fall back to cached image on error
+    const cached = await getCachedBackground()
+    if (cached) bgUrl.value = cached
+  }
 }
 
 onMounted(() => {
   fetchBackground()
-  window.addEventListener('subreddits-updated', onSubredditsUpdated)
   window.addEventListener('drawer-toggled', onDrawerToggle)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('subreddits-updated', onSubredditsUpdated)
   window.removeEventListener('drawer-toggled', onDrawerToggle)
 })
 </script>
