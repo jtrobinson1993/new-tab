@@ -544,7 +544,7 @@ onUnmounted(() => {
 
 .channel-handle {
   font-size: 0.75rem;
-  color: #666;
+  color: #999;
   margin-left: auto;
 }
 
@@ -566,7 +566,7 @@ onUnmounted(() => {
 
 .empty-state {
   font-size: 0.85rem;
-  color: #555;
+  color: #999;
   padding: 12px 0;
 }
 

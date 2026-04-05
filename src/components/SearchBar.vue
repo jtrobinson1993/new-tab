@@ -57,18 +57,22 @@ onMounted(() => {
         placeholder="Search..."
         autocomplete="off"
         spellcheck="false"
+        aria-label="Search the web"
       />
     </form>
-    <div class="engine-options">
-      <label
+    <div class="engine-options" role="radiogroup" aria-label="Search engine">
+      <button
         v-for="engine in engines"
         :key="engine.id"
+        type="button"
         class="engine-label"
         :class="{ active: selectedEngine === engine.id }"
+        role="radio"
+        :aria-checked="selectedEngine === engine.id"
         @click="setEngine(engine.id)"
       >
-{{ engine.name }}
-      </label>
+        {{ engine.name }}
+      </button>
     </div>
   </div>
 </template>

@@ -118,7 +118,10 @@ async function fetchWeatherForLocation(loc: SavedLocation) {
   weatherResults.value.set(key, { weather: null, loading: true, error: '' })
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,precipitation_probability,precipitation&temperature_unit=fahrenheit&forecast_days=7&timezone=auto`
-    const res = await fetch(url)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+    const res = await fetch(url, { signal: controller.signal })
+    clearTimeout(timeout)
     const data = await res.json()
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     const forecast: ForecastDay[] = (data.daily.time as string[]).slice(1).map((date: string, i: number) => {
