@@ -130,6 +130,8 @@ onMounted(() => {
   transition: color 0.15s, background 0.15s;
   padding: 5px 12px;
   border-radius: 6px;
+  border: none;
+  background: none;
 }
 
 .engine-label.active {
