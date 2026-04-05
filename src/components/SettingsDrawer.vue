@@ -180,17 +180,35 @@ function addChannel() {
 
   if (raw.includes('youtube.com/') || raw.includes('youtu.be/')) {
     detectedPlatform = 'youtube'
-    const match = raw.match(/youtube\.com\/(@[\w-]+|channel\/[\w-]+)/)
-    if (match?.[1]) {
-      handle = match[1]
-      name = handle.replace(/^@/, '')
+    try {
+      const url = new URL(raw.startsWith('http') ? raw : `https://${raw}`)
+      const segments = url.pathname.split('/').filter(Boolean)
+      if (segments.length > 0) {
+        handle = segments[0]!.startsWith('@') ? segments[0]! : segments.join('/')
+        name = handle.replace(/^@/, '')
+      }
+    } catch {
+      const match = raw.match(/youtube\.com\/(@[\w-]+|channel\/[\w-]+)/)
+      if (match?.[1]) {
+        handle = match[1]
+        name = handle.replace(/^@/, '')
+      }
     }
   } else if (raw.includes('twitch.tv/')) {
     detectedPlatform = 'twitch'
-    const match = raw.match(/twitch\.tv\/([\w-]+)/)
-    if (match?.[1]) {
-      handle = match[1]
-      name = handle
+    try {
+      const url = new URL(raw.startsWith('http') ? raw : `https://${raw}`)
+      const segments = url.pathname.split('/').filter(Boolean)
+      if (segments.length > 0) {
+        handle = segments[0]!
+        name = handle
+      }
+    } catch {
+      const match = raw.match(/twitch\.tv\/([\w-]+)/)
+      if (match?.[1]) {
+        handle = match[1]
+        name = handle
+      }
     }
   } else {
     if (detectedPlatform === 'youtube' && !raw.startsWith('@')) {

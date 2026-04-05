@@ -40,7 +40,9 @@ function search() {
 
 onMounted(() => {
   loadEngine()
-  searchInput.value?.focus()
+  if (window.matchMedia('(pointer: fine)').matches) {
+    searchInput.value?.focus()
+  }
 })
 </script>
 

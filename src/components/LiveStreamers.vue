@@ -70,20 +70,10 @@ async function checkTwitchLive(
   return { live: true, title: stream.title, viewers: stream.viewersCount }
 }
 
-const SIMULATE_LIVE = false
-
 const { data: liveStreams, refetch } = useQuery({
   key: ['live-streamers'],
   query: async (): Promise<LiveStream[]> => {
     if (streamers.value.length === 0) return []
-
-    if (SIMULATE_LIVE) {
-      return streamers.value.map((s) => ({
-        ...s,
-        title: s.platform === 'twitch' ? 'Just chatting with the boys' : 'Trackmania COTD Grind',
-        viewers: s.platform === 'twitch' ? 24312 : undefined,
-      }))
-    }
 
     const cached = getCached<LiveStream[]>('live-streamers')
     if (cached) return cached
