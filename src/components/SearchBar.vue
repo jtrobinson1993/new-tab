@@ -60,19 +60,23 @@ onMounted(() => {
         aria-label="Search the web"
       />
     </form>
-    <div class="engine-options" role="radiogroup" aria-label="Search engine">
-      <button
+    <div class="engine-options">
+      <label
         v-for="engine in engines"
         :key="engine.id"
-        type="button"
         class="engine-label"
         :class="{ active: selectedEngine === engine.id }"
-        role="radio"
-        :aria-checked="selectedEngine === engine.id"
-        @click="setEngine(engine.id)"
       >
+        <input
+          type="radio"
+          name="search-engine"
+          :value="engine.id"
+          :checked="selectedEngine === engine.id"
+          class="engine-radio"
+          @change="setEngine(engine.id)"
+        />
         {{ engine.name }}
-      </button>
+      </label>
     </div>
   </div>
 </template>
@@ -119,6 +123,12 @@ onMounted(() => {
   padding: 4px;
 }
 
+.engine-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .engine-label {
   display: flex;
   align-items: center;
@@ -130,8 +140,6 @@ onMounted(() => {
   transition: color 0.15s, background 0.15s;
   padding: 5px 12px;
   border-radius: 6px;
-  border: none;
-  background: none;
 }
 
 .engine-label.active {
