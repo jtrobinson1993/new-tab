@@ -10,12 +10,17 @@ const UNSPLASH_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY
 const BG_KEYWORDS_KEY = 'background-keywords'
 const bgUrl = ref('')
 const drawerOpen = ref(false)
+let fetchController: AbortController | null = null
 
 function onDrawerToggle(e: Event) {
   drawerOpen.value = (e as CustomEvent).detail
 }
 
 async function fetchBackground() {
+  if (fetchController) fetchController.abort()
+  fetchController = new AbortController()
+  const { signal } = fetchController
+
   try {
     const cachedCount = await getCachedImageCount()
 
@@ -40,10 +45,9 @@ async function fetchBackground() {
 
     const res = await fetch(
       `https://api.unsplash.com/photos/random?orientation=landscape&query=${encodeURIComponent(query)}&w=1920`,
-      { headers: { 'Authorization': `Client-ID ${UNSPLASH_KEY}` } },
+      { headers: { 'Authorization': `Client-ID ${UNSPLASH_KEY}` }, signal },
     )
     if (!res.ok) {
-      // Fall back to cached image if available
       const cached = await getCachedBackground()
       if (cached) bgUrl.value = cached
       return
@@ -52,8 +56,8 @@ async function fetchBackground() {
     const data = await res.json()
     const imageUrl = data.urls.full
     bgUrl.value = await cacheImage(imageUrl)
-  } catch {
-    // Fall back to cached image on error
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return
     const cached = await getCachedBackground()
     if (cached) bgUrl.value = cached
   }
@@ -62,7 +66,7 @@ async function fetchBackground() {
 async function onBgKeywordsUpdated() {
   await clearCache()
   bgUrl.value = ''
-  fetchBackground()
+  await fetchBackground()
 }
 
 onMounted(() => {

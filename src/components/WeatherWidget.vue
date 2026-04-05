@@ -147,8 +147,12 @@ async function fetchWeatherForLocation(loc: SavedLocation) {
     // Include current temp in the range
     const currentTemp = data.current.temperature_2m
     todayHourlyTemps.push(currentTemp)
-    const todayHigh = Math.round(Math.max(...todayHourlyTemps))
-    const todayLow = Math.round(Math.min(...todayHourlyTemps))
+    const todayHigh = todayHourlyTemps.length > 0
+      ? Math.round(Math.max(...todayHourlyTemps))
+      : Math.round(data.daily.temperature_2m_max[0])
+    const todayLow = todayHourlyTemps.length > 0
+      ? Math.round(Math.min(...todayHourlyTemps))
+      : Math.round(data.daily.temperature_2m_min[0])
 
     // Compute today's precipitation from hourly data for the rest of the day
     const hourlyPrecipProb: number[] = data.hourly.precipitation_probability
@@ -275,7 +279,10 @@ onUnmounted(() => {
           <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
       </div>
-      <div v-else-if="item.error" class="error">{{ item.error }}</div>
+      <div v-else-if="item.error" class="error">
+        {{ item.error }}
+        <button class="retry-btn" @click.stop="fetchWeatherForLocation(item.location)">Retry</button>
+      </div>
       <template v-else-if="item.weather">
         <p class="city">{{ item.location.name }}</p>
         <div class="weather-body">
@@ -470,6 +477,25 @@ onUnmounted(() => {
 .error {
   font-size: 0.95rem;
   color: #aaa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.retry-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 0.8rem;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.retry-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 </style>
