@@ -4,9 +4,10 @@ import WeatherWidget from './components/WeatherWidget.vue'
 import LiveStreamers from './components/LiveStreamers.vue'
 import SettingsDrawer from './components/SettingsDrawer.vue'
 import SearchBar from './components/SearchBar.vue'
-import { getCachedBackground, getCachedImageCount, cacheImage } from '@/utils/imageCache'
+import { getCachedBackground, getCachedImageCount, cacheImage, clearCache } from '@/utils/imageCache'
 
 const UNSPLASH_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY
+const BG_KEYWORDS_KEY = 'background-keywords'
 const bgUrl = ref('')
 const drawerOpen = ref(false)
 
@@ -26,8 +27,19 @@ async function fetchBackground() {
       }
     }
 
+    let query = 'nature landscape'
+    try {
+      const raw = localStorage.getItem(BG_KEYWORDS_KEY)
+      if (raw) {
+        const keywords: string[] = JSON.parse(raw)
+        if (keywords.length > 0) {
+          query = keywords[Math.floor(Math.random() * keywords.length)]!
+        }
+      }
+    } catch { /* ignore */ }
+
     const res = await fetch(
-      'https://api.unsplash.com/photos/random?orientation=landscape&query=nature+landscape&w=1920',
+      `https://api.unsplash.com/photos/random?orientation=landscape&query=${encodeURIComponent(query)}&w=1920`,
       { headers: { 'Authorization': `Client-ID ${UNSPLASH_KEY}` } },
     )
     if (!res.ok) {
@@ -47,13 +59,21 @@ async function fetchBackground() {
   }
 }
 
+async function onBgKeywordsUpdated() {
+  await clearCache()
+  bgUrl.value = ''
+  fetchBackground()
+}
+
 onMounted(() => {
   fetchBackground()
   window.addEventListener('drawer-toggled', onDrawerToggle)
+  window.addEventListener('bg-keywords-updated', onBgKeywordsUpdated)
 })
 
 onUnmounted(() => {
   window.removeEventListener('drawer-toggled', onDrawerToggle)
+  window.removeEventListener('bg-keywords-updated', onBgKeywordsUpdated)
 })
 </script>
 

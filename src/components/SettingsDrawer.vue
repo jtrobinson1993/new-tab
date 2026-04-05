@@ -17,6 +17,7 @@ interface SavedLocation {
 const CHANNELS_KEY = 'streamer-channels'
 const LOCATIONS_KEY = 'weather-locations'
 const TEMP_UNIT_KEY = 'temperature-unit'
+const BG_KEYWORDS_KEY = 'background-keywords'
 
 const DEFAULT_CHANNELS: ChannelConfig[] = [
   { name: 'WirtualTV', platform: 'youtube', handle: '@WirtualTV' },
@@ -46,6 +47,10 @@ const platform = ref<'youtube' | 'twitch'>('twitch')
 const handleInput = ref('')
 const inputError = ref('')
 
+const bgKeywords = ref<string[]>([])
+const bgKeywordInput = ref('')
+const bgKeywordError = ref('')
+
 const weatherLocations = ref<SavedLocation[]>([])
 const locationInput = ref('')
 const locationError = ref('')
@@ -72,6 +77,39 @@ function saveChannels() {
   localStorage.setItem(CHANNELS_KEY, JSON.stringify(channels.value))
   localStorage.removeItem('live-streamers')
   window.dispatchEvent(new CustomEvent('channels-updated'))
+}
+
+function loadBgKeywords(): string[] {
+  try {
+    const raw = localStorage.getItem(BG_KEYWORDS_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return []
+}
+
+function saveBgKeywords() {
+  localStorage.setItem(BG_KEYWORDS_KEY, JSON.stringify(bgKeywords.value))
+  window.dispatchEvent(new CustomEvent('bg-keywords-updated'))
+}
+
+function addBgKeyword() {
+  const raw = bgKeywordInput.value.trim().toLowerCase()
+  if (!raw) return
+
+  if (bgKeywords.value.some((k) => k.toLowerCase() === raw)) {
+    bgKeywordError.value = 'Already added'
+    return
+  }
+
+  bgKeywords.value.push(raw)
+  saveBgKeywords()
+  bgKeywordInput.value = ''
+  bgKeywordError.value = ''
+}
+
+function removeBgKeyword(index: number) {
+  bgKeywords.value.splice(index, 1)
+  saveBgKeywords()
 }
 
 function loadWeatherLocations(): SavedLocation[] {
@@ -182,6 +220,7 @@ function removeChannel(index: number) {
 
 onMounted(() => {
   channels.value = loadChannels()
+  bgKeywords.value = loadBgKeywords()
   weatherLocations.value = loadWeatherLocations()
   if (!localStorage.getItem(CHANNELS_KEY)) {
     saveChannels()
@@ -242,6 +281,35 @@ onUnmounted(() => {
             <button type="submit" class="add-btn" :disabled="locationLoading">
               {{ locationLoading ? 'Searching...' : 'Add Location' }}
             </button>
+          </form>
+        </section>
+
+        <hr class="section-divider" />
+
+        <section class="section">
+          <h3>Background</h3>
+          <p class="section-hint">Add keywords for Unsplash background images. A random keyword is chosen each time a new image is fetched. Leave empty for general nature/landscape photos.</p>
+
+          <div class="channel-list">
+            <div v-for="(kw, i) in bgKeywords" :key="kw" class="channel-item">
+              <span class="keyword-label">{{ kw }}</span>
+              <button class="channel-remove" @click="removeBgKeyword(i)"><Icon icon="mdi:close" width="14" height="14" /></button>
+            </div>
+            <div v-if="bgKeywords.length === 0" class="empty-state">
+              No keywords added — using nature/landscape.
+            </div>
+          </div>
+
+          <form class="add-form" @submit.prevent="addBgKeyword">
+            <input
+              v-model="bgKeywordInput"
+              type="text"
+              placeholder="e.g. mountains, ocean, forest, city"
+              class="channel-input"
+              @input="bgKeywordError = ''"
+            />
+            <p v-if="bgKeywordError" class="input-error">{{ bgKeywordError }}</p>
+            <button type="submit" class="add-btn">Add Keyword</button>
           </form>
         </section>
 
@@ -421,6 +489,12 @@ onUnmounted(() => {
 }
 
 .location-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  flex: 1;
+}
+
+.keyword-label {
   font-size: 0.9rem;
   font-weight: 500;
   flex: 1;

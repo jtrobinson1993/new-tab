@@ -57,6 +57,12 @@ export async function getCachedImageCount(): Promise<number> {
   return valid.length
 }
 
+export async function clearCache(): Promise<void> {
+  const db = await openDB()
+  const store = tx(db, 'readwrite')
+  store.clear()
+}
+
 export async function cacheImage(url: string): Promise<string> {
   const res = await fetch(url)
   const blob = await res.blob()
